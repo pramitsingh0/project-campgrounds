@@ -56,17 +56,26 @@ app.get("/campgrounds/:id/edit", async (req, res) => {
   const campground = await Campground.findById(req.params.id);
   res.render("campgrounds/update", { campground });
 });
-app.put("/campgrounds/:id/update", async (req, res) => {
-  await Campground.findByIdAndUpdate(req.params.id, req.body.campground, {
-    new: true,
-  });
-  res.redirect(`/campgrounds/${req.params.id}`);
+app.put("/campgrounds/:id/update", async (req, res, next) => {
+  try {
+    await Campground.findByIdAndUpdate(req.params.id, req.body.campground, {
+      new: true,
+    });
+    res.redirect(`/campgrounds/${req.params.id}`);
+  } catch (err) {
+    next(err);
+  }
 });
 
 //DELETE
 app.delete("/campgrounds/:id", async (req, res) => {
   await Campground.findByIdAndDelete(req.params.id);
   res.redirect("/campgrounds");
+});
+
+// ERROR HANDLER
+app.use((err, req, res, next) => {
+  console.log("Something went wrong");
 });
 
 app.listen(3000, () => {
