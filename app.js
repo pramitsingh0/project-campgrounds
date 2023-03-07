@@ -6,6 +6,8 @@ const bodyParser = require("body-parser");
 const methodOverride = require("method-override");
 const Campground = require("./models/campground");
 const ejsMate = require("ejs-mate");
+const asyncError = require("./utils/asyncError");
+const ExpressError = require("./utils/ExpressError");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 
@@ -41,31 +43,30 @@ app.get("/campgrounds/:id", async (req, res) => {
   res.render("campgrounds/show", { campground });
 });
 
-app.post("/campgrounds/save", async (req, res, next) => {
-  try {
+app.post(
+  "/campgrounds/save",
+  asyncError(async (req, res, next) => {
+    if (!req.body.campground) throw new ExpressError("Invalid input", 400);
     const newCamp = new Campground(req.body.campground);
     await newCamp.save();
     res.redirect(`/campgrounds/${newCamp._id}`);
-  } catch (e) {
-    next(e);
-  }
-});
+  })
+);
 
 //EDIT
 app.get("/campgrounds/:id/edit", async (req, res) => {
   const campground = await Campground.findById(req.params.id);
   res.render("campgrounds/update", { campground });
 });
-app.put("/campgrounds/:id/update", async (req, res, next) => {
-  try {
+app.put(
+  "/campgrounds/:id/update",
+  asyncError(async (req, res, next) => {
     await Campground.findByIdAndUpdate(req.params.id, req.body.campground, {
       new: true,
     });
     res.redirect(`/campgrounds/${req.params.id}`);
-  } catch (err) {
-    next(err);
-  }
-});
+  })
+);
 
 //DELETE
 app.delete("/campgrounds/:id", async (req, res) => {
@@ -75,7 +76,9 @@ app.delete("/campgrounds/:id", async (req, res) => {
 
 // ERROR HANDLER
 app.use((err, req, res, next) => {
-  console.log("Something went wrong");
+  const { statuscode = 500, message = "Something went wrong" } = err;
+  res.status(statuscode).send(message);
+  return next();
 });
 
 app.listen(3000, () => {
