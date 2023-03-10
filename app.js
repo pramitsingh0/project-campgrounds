@@ -9,11 +9,11 @@ const Review = require("./models/reviews");
 const ejsMate = require("ejs-mate");
 const asyncError = require("./utils/asyncError");
 const ExpressError = require("./utils/ExpressError");
+const campgroundRoutes = require("./routes/campgrounds");
 const {
   campValidatorSchema,
   reviewValidateSchema,
 } = require("./campValidateSchema");
-const campground = require("./models/campground");
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(methodOverride("_method"));
 
@@ -34,31 +34,8 @@ db()
 app.engine("ejs", ejsMate);
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
+app.use("/campgrounds", campgroundRoutes);
 
-app.get("/", (req, res) => {
-  res.render("campgrounds/home");
-});
-app.get("/campgrounds", async (req, res) => {
-  const campgrounds = await Campground.find({});
-  res.render("campgrounds/index", { campgrounds });
-});
-app.get("/campgrounds/new", (req, res) => res.render("campgrounds/newcamp"));
-
-app.get("/campgrounds/:id", async (req, res) => {
-  const campground = await Campground.findById(req.params.id).populate(
-    "reviews"
-  );
-  res.render("campgrounds/show", { campground });
-});
-const validateCamp = (req, res, next) => {
-  const { error } = campValidatorSchema.validate(req.body);
-  if (error) {
-    const mssg = error.details.map((el) => el.message).join(",");
-    throw new ExpressError(mssg, 400);
-  } else {
-    next();
-  }
-};
 const validateReview = (req, res, next) => {
   const { error } = reviewValidateSchema.validate(req.body);
   if (error) {
@@ -69,37 +46,6 @@ const validateReview = (req, res, next) => {
   }
 };
 
-app.post(
-  "/campgrounds/save",
-  validateCamp,
-  asyncError(async (req, res, next) => {
-    const newCamp = new Campground(req.body.campground);
-    await newCamp.save();
-    res.redirect(`/campgrounds/${newCamp._id}`);
-  })
-);
-
-//EDIT
-app.get("/campgrounds/:id/edit", async (req, res) => {
-  const campground = await Campground.findById(req.params.id);
-  res.render("campgrounds/update", { campground });
-});
-app.put(
-  "/campgrounds/:id/update",
-  validateCamp,
-  asyncError(async (req, res, next) => {
-    await Campground.findByIdAndUpdate(req.params.id, req.body.campground, {
-      new: true,
-    });
-    res.redirect(`/campgrounds/${req.params.id}`);
-  })
-);
-
-//DELETE
-app.delete("/campgrounds/:id", async (req, res) => {
-  await Campground.findByIdAndDelete(req.params.id);
-  res.redirect("/campgrounds");
-});
 // CREATE REVIEW
 app.post(
   "/campgrounds/:id/review",
